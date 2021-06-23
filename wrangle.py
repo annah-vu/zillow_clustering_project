@@ -91,7 +91,7 @@ def handle_missing_values(df, prop_required_column = .5, prop_required_row = .5)
     
     
 def impute(df, my_strategy, column_list):
-    ''' take in a df strategy and cloumn list
+    ''' take in a df, strategy, and cloumn list
         return df with listed columns imputed using input stratagy
     '''
         
@@ -101,6 +101,18 @@ def impute(df, my_strategy, column_list):
 
     return df
 
+def impute_birds(train, validate, test, my_strategy, column_list):
+    ''' take in a df, strategy, and cloumn list
+        return df with listed columns imputed using input stratagy
+    '''
+        
+    imputer = SimpleImputer(strategy=my_strategy)  # build imputer
+
+    train[column_list] = imputer.fit_transform(train[column_list]) # fit/transform selected columns
+    validate[column_list] = imputer.transform(validate[column_list])
+    test[column_list] = imputer.transform(test[column_list])
+
+    return train, validate, test
 #######
 def get_counties(df):
     '''
@@ -225,11 +237,11 @@ def prepare_zillow(df):
     
     #drop outliers from new features
     df = remove_outliers_new_features(df)
-    # imputing descreet columns with most frequent value
-    df = impute(df, 'most_frequent', ['calculatedbathnbr', 'fullbathcnt', 'regionidcity', 'regionidzip', 'censustractandblock'])
+    # imputing discrete columns with most frequent value
+    #df = impute(df, 'most_frequent', ['calculatedbathnbr', 'fullbathcnt', 'regionidcity', 'regionidzip', 'censustractandblock'])
     
     # imputing continuous columns with median value
-    df = impute(df, 'median', ['finishedsquarefeet12', 'lotsizesquarefeet', 'structuretaxvaluedollarcnt', 'taxvaluedollarcnt', 'landtaxvaluedollarcnt', 'taxamount'])
+    #df = impute(df, 'median', ['finishedsquarefeet12', 'lotsizesquarefeet', 'structuretaxvaluedollarcnt', 'taxvaluedollarcnt', 'landtaxvaluedollarcnt', 'taxamount'])
     
     df = df.rename(columns={
                             'parcelid': 'parcel_id',
@@ -242,7 +254,7 @@ def prepare_zillow(df):
         
     })
     
-    df = df.dropna()
+    #df = df.dropna()
     df['county'] = df.fips.apply(lambda x: 'orange' if x == 6059.0 else 'los_angeles' if x == 6037.0 else 'ventura')
     df = df.drop(columns=['fips'])
     dummies = pd.get_dummies(df['county'])
@@ -297,3 +309,21 @@ def train_validate_test(df, target):
     y_test = test[target]
     
     return train, validate, test, X_train, y_train, X_validate, y_validate, X_test, y_test
+
+def impute_nulls(train, validate, test, strategy='mean', col_list=None): 
+    if col_list != None:
+        for col in col_list:
+            imputer=SimpleImputer(strategy=strategy)
+            train[[col]]=imputer.fit_transform(train[[col]])
+            validate[[col]]=imputer.transform(validate[[col]])
+            test[[col]]=imputer.transform(test[[col]])
+            
+    else:
+        for col in list(train):
+            imputer=SimpleImputer(strategy=strategy)
+            train[[col]]=imputer.fit_transform(train[[col]])
+            validate[[col]]=imputer.transform(validate[[col]])
+            test[[col]]=imputer.transform(test[[col]])
+
+            
+    return train, validate, test
