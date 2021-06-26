@@ -112,10 +112,15 @@ For the next stage: Drop or fill in nulls, remove outliers, rename columns, make
 ## 8c.) Prep :soap:
 Goal: Have Zillow dataset that is split into train, validate, test, and ready to be analyzed. Assure data types are appropriate and that missing values/duplicates/outliers are addressed. Put this in our wrangle.py file as well. 
 In this stage, I handled missing values by dropping any rows and columns with more than 50% missing data. 
+
 I assured that all columns had a numeric data type, and renamed them for ease of use.
+
 Duplicates were dropped (in parcelid)
+
 Nulls in square footage, lotsize, tax value, and tax amount were imputed with median. (after splitting)
+
 Nulls in calculatedbathnbr, full bath count, region id city, regionidzip, and censustractandblock were imputed with most frequent. (after splitting)
+
 Any remaining nulls after these were dropped. 
 I split the data into train, validate, test, X_train, y_train, X_validate, y_validate, X_test, and y_test.
 Last, I scaled it on a StandardScaler scaler (I made sure to drop outliers first!) and also returned X_train, X_validate, and X_test scaled. 
@@ -138,17 +143,17 @@ Last, I scaled it on a StandardScaler scaler (I made sure to drop outliers first
 
 <br>
 
-For the next step: run statistical testing and visualize data to find relationships between variables.
+For the next step: run statistical testing and visualize data to find relationships between variables, and create clusters.
 <br>
 
 
 ## 8d.) Explore :mag:
-Goal: Visualize the data. Explore relationships.  Find answers. Use the visuals and statistics tests to help answer your questions. 
+Goal: Visualize the data. Explore relationships, and make clusters. Use the visuals and statistics tests to help answer my questions. 
 I plotted distributions, made sure nothing was out of the ordinary after cleaning the dataset. 
 
-Plotted a pairplot to see combinations of variables.
+Plotted a pairplot to see combinations of variables with log error bins.
 
-I ran a few t-tests with the features in respect to tax_value. Also a few to see if the independent variables were related to each other. 
+I ran a few t-tests with the features in respect to log error to test for difference in means. Also did a few correlation tests for continuous variables. 
 
 I found that square footage, bedroom count, and bathroom count were all statistically significant. They are not independent to property value. Bedroom count and bathroom count were also dependent on each other. 
 <br>
@@ -171,41 +176,34 @@ The models worked best with sqft, baths, beds, and age. Polynomial Regression pe
 
 | Model                            | RMSE Training | RMSE Validate | R^2   |
 |----------------------------------|---------------|---------------|-------|
-| Baseline                         | 357,185.61    | 359,454.06    | -3.07 |
-| LinearRegression                 | 280,731.20    | 279,672.68    | 0.395 |
-| LassoLars                        | 280,731.60    | 279,675.52    | 0.395 |
-| TweedieRegressor                 | 280,731.20    | 279,672.68    | 0.395 |
-| PolynomialRegression (3 degrees) | 276,310.65    | 274,076.31    | 0.42  |
+| Baseline                         | 0.1688        | 0.1632        | 0.00  |
+| OLS LinearRegression             | 0.1685        | 0.1630        | 0.002 |
+| LassoLars                        | 0.1688        | 0.1632        | 0.00  |
+| TweedieRegressor                 | 0.1686        | 0.1630        | 0.002 |
+| PolynomialRegression (2 degrees) | 0.1683        | 0.1631        | 0.001 |
 <br>
 
-Test:
- - RMSE of 272,168.27
- - R^2 of 0.403
+Test for OLS Linear Regression:
+ - RMSE of 0.177
+ - R^2 of 0.003
 
-Beats the baseline! 
+Mission Failed. We'll get them next time. 
 <br>
 ## 8f.) Delivery
 I will be giving a presentation over my findings!
- - All acquire and prepare .py files are uploaded for easy replication.
- - Trello board link
- - Presentation slides
+ - All acquire and prepare functions are uploaded for easy replication under wrangle.py.
  - This README 
  - Final notebook that documents a commented walkthrough of my process
 
 ## 9.) Conclusion
 
 To conclude...
-We took a very large Zillow dataset and condensed it down to 37,927 rows to work with. We dropped rows with outliers of 3 standard deviations above or below the mean for that column. 
+My clustering didn't help with my supervised model, however, I could not find the right combinations to make my model beat the baseline for predicting log error either. 
 
- -  Square footage was the best feature to determine a property's value. As square footage increased, it seemed that value also went up.
-
- -  The more bedrooms and bathrooms a house has, the more it was worth. These number of rooms also related to square footage in a positive relationship.
-
- -  Age was not a huge factor in value, but was helpful in our model's predictions.
-
- -  Using all of square footage, number of bedrooms, number of bathrooms, and age into a model performed better than the baseline. 
-
- -  All three counties have similar tax rates, but LA has the highest.
+ -  Log error was different for properties depending on county, number of bathrooms, bedrooms, dollar per square foot, and age.
+ - I made clusters with age and square footage, longitude and latitude, and based on property features like age, dollar per sqft, and number of bathrooms and bedrooms. I also made one based on location (neighborhoods) which consisted of longitude, latitude, and age. 
+ - Appears that Zestimates are pretty good at guessing what the final sale price will be. 
+ - Further exploration needed?
 
 
 
@@ -249,9 +247,6 @@ We took a very large Zillow dataset and condensed it down to 37,927 rows to work
 ## 11.) How to Recreate Project
 
  - You'll need your own username/pass/host credentials in order to use the get_connection function in my acquire.py to access the Zillow database
- - Have a copy of my acquire, prep, explore .py files. You can adjust the features to use, how to handle outliers, etc. or just keep it the way I have it! 
+ - Have a copy of my wrangle.py, and explore.py files. You can adjust the features to use, how to handle outliers, etc. or just keep it the way I have it! 
  - My final notebook has all of the steps outlined, and it is really easy to adjust parameters.
- 
- - https://trello.com/b/mVk9grFF/zillow 
- 
- - Use Trello Board link to help you get an idea of the steps. 
+
