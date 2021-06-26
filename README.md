@@ -48,6 +48,7 @@
 
 ## 4.) Deliverables
  - Finalized Jupyter notebook complete with comments
+ - Modules with functions used, complete with docstrings.
  - A README.md with executive summary, contents, data dictionary, conclusion and next steps, and how to recreate this project.
  <br>
  <br>
@@ -65,15 +66,17 @@
 
 4.) Log error is affected by price per sq ft.
 
+5.) Log error is affected by combinations of internal property features and combinations of locational features. 
+
 
 ## 7.)  Findings and Next Steps
-   - There appears to be distinct groups between longitude/latitude/age, and dollar per sqft/number of bathrooms and bedrooms/age
-   - Using recursive feature elimination used dollar per sqft, number of bathrooms and bedrooms, county, tax amount, and census block
+   - There appears to be distinct groups between longitude/latitude/age, and dollar per sqft/number of bathrooms and bedrooms/age, however, these groups don't help our supervised model. 
+   - Using recursive feature elimination, it selected dollar per sqft, number of bathrooms and bedrooms, county, tax amount, tax value, and census block. 
 
 Next steps would be:
  - gather more information on location
- - try to clean up/fill in missing values for other location-based columns such as ZIP code
- - Try out new combinations for clustering
+ - Look more into census block, try to fix ZIP codes based on latitude/longitude
+ - Try out new combinations for clustering with these as well as other columns with other property features.
 
 <br>
 <br>
@@ -82,24 +85,22 @@ Next steps would be:
 
 ## 8a.) Planning :stopwatch:
 Goal: Plan out the project
-I will be seeing how square footage, bathroom count, and bedroom count relate to property value. I believe there will be a 
-positive correlation among these variables. 
+I will be seeing how square footage, bathroom count, bedroom count, longitude, latitude, dollar per square foot, age, and county relate to log error of Zestimates. I will try to cluster by location and by house features to see if it'll be helpful to a supervised regression model. 
 
-I also want to look into other features, like age and FIPS code, and see if that will also correlate to property value. 
-A lot of these features could play hand in hand and help my model make better predictions.
+First, I will begin by bringing in my data and exploring features to assure that I want to continue with clustering these (and/or others), I can then turn it into a cluster column and use feature selection to see if the clustering helps. 
 
-Hypotheses: Square footage, number of bedrooms, number of bathrooms have a positive relationship with value. Age has a negative relationship with value. FIPS codes have an affect on value, perhaps the means are different across each county. 
+Hypotheses:  
 
 
 <br>
 
 ## 8b.) Acquire :bulb:
-Goal: Have Zillow dataframe ready to prepare in acquire.py
-In this stage, I used a connection URL to access the CodeUp database. Using a SQL query, I brought in the Zillow dataset with only properties set for single use, and were sold in between May-August 2017. I turned it into a pandas dataframe and created a .csv in order to use it for the rest of the pipeline. 
-| acquire.py Functions | Purpose                                                        |
+Goal: Have Zillow dataframe ready to prepare in first part of  wrangle.py
+In this stage, I used a connection URL to access the CodeUp database. Using a SQL query, I brought in the 2017 Zillow dataset with only properties set for single use, and joined them with other tables via parcelid to get all of their features. I turned it into a pandas dataframe and created a .csv in order to use it for the rest of the pipeline. 
+| Acquire Functions    | Purpose                                                        |
 |----------------------|----------------------------------------------------------------|
 | get_connection()     | Creates a connection link so we can access our data            |
-| new_zillow_data()    | Uses a SQL query to return Zillow into a data frame            |
+| new_zillow_data()    | Joins our 2017 Zillow data, sets parcelid as index             |
 | get_zillow_data()    | Returns Zillow as a data frame, and creates a local Zillow.csv |
 <br>
 
@@ -109,24 +110,32 @@ For the next stage: Drop or fill in nulls, remove outliers, rename columns, make
 <br>
 
 ## 8c.) Prep :soap:
-Goal: Have Zillow dataset that is split into train, validate, test, and ready to be analyzed. Assure data types are appropriate and that missing values/duplicates/outliers are addressed. Put this in a prep.py. 
-In this stage, I handled outliers by dropping any rows with values that were 3 standard deviations above or below the mean.
+Goal: Have Zillow dataset that is split into train, validate, test, and ready to be analyzed. Assure data types are appropriate and that missing values/duplicates/outliers are addressed. Put this in our wrangle.py file as well. 
+In this stage, I handled missing values by dropping any rows and columns with more than 50% missing data. 
 I assured that all columns had a numeric data type, and renamed them for ease of use.
 Duplicates were dropped (in parcelid)
-Nulls were also dropped, due to the strong correlation between square feet in respect to property value. I did not want to risk making the model dependent on assumed values. 
+Nulls in square footage, lotsize, tax value, and tax amount were imputed with median. (after splitting)
+Nulls in calculatedbathnbr, full bath count, region id city, regionidzip, and censustractandblock were imputed with most frequent. (after splitting)
+Any remaining nulls after these were dropped. 
 I split the data into train, validate, test, X_train, y_train, X_validate, y_validate, X_test, and y_test.
-Last, I scaled it on a min-max scaler (I made sure to drop outliers first!) and also returned X_train, X_validate, and X_test scaled. 
+Last, I scaled it on a StandardScaler scaler (I made sure to drop outliers first!) and also returned X_train, X_validate, and X_test scaled. 
 <br>
-| prep.py                                                  | Purpose                                                           |
-|----------------------------------------------------------|-------------------------------------------------------------------|
-| remove_outlier(df)                                       | removes outliers for certain columns                              |
-| clean_zillow(df)                                         | obtain certain columns, makes it ready for use                    |
-| train_validate_test(df, target)                          | X sets and y sets                                                 |
-| get_object_cols(df)                                      | returns columns with object data types                            |
-| get_numeric_X_cols(df, object_cols)                      | returns columns with numeric data types                           |
-| min_max_scale(X_train, X_validate, X_test, numeric_cols) | uses MinMax scaler on X sets                                      |
-| clean_zillow_taxes(df) *for tax_rates                    | cleans Zillow data for use in calculating tax_rates of properties |
-| remove_outlier_tax(df) *for tax rates                    | removes outliers for use in calculating tax_rates of properties   |
+| Prepare Functions                                                   | Purpose                                                                                 |
+|---------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| remove_outliers(df, k,col_list)                                     | remove outliers, using IQR * multiplier, from a list of columns in a dataframe          |
+| handle_missing_values(df, prop_required_column, prop_prequired_row) | drops columns and rows based on unsatisfied threshold                                   |
+| get_counties(df)                                                    | creates dummies from fips column                                                        |
+| create_features(df)                                                 | creates new features from original Zillow df (see details in docstring)                 |
+| remove_outliers_new_features(df)                                    | removes outliers for newly created features                                             |
+| prepare_zillow(df)                                                  | handles outliers, some missing values, adds features, renames columns                   |
+| train_validate_test_split(df, target, seed=1349)                    | splits data frame into 56% train, 24% validate, and 20% test sets.                      |
+| train_validate_test(df, target)                                     | returns train, validate, test, X_train, y_train, X_validate, y_validate, X_test, y_test |
+| impute_nulls(train, validate, test, strategy='mean', col_list=None) | imputes nulls based on strategy to train, validate, and test sets.                      |
+| split_X_y(train, validate, test, target)                            | returns X_train, y_train, X_validate, y_validate, X_test, y_test (use after imputing)   |
+| standard_scale_data(X_train, X_validate, X_test)                    | scales data using StandardScaler                                                        |
+| get_object_cols(df)                                                 | returns names of object columns                                                         |
+| get_numeric_C_cols(X_train, object_cols)                            | using object cols, returns names of numeric columns                                     |
+
 <br>
 
 For the next step: run statistical testing and visualize data to find relationships between variables.
@@ -203,20 +212,35 @@ We took a very large Zillow dataset and condensed it down to 37,927 rows to work
 
 ## 10.) Data Dictionary 
 
-| Column Name                  | Renamed   | Info                                            |
-|------------------------------|-----------|-------------------------------------------------|
-| parcelid                     | N/A       | ID of the property (unique)                     |
-| bathroomcnt                  | baths     | number of bathrooms                             |
-| bedroomcnt                   | beds      | number of bedrooms                              |
-| calculatedfinishedsquarefeet | sqft      | number of square feet                           |
-| fips                         | N/A       | FIPS code (for county)                          |
-| propertylandusetypeid        | N/A       | Type of property                                |
-| yearbuilt                    | N/A       | The year the property was built                 |
-| taxvaluedollarcnt            | tax_value | Property's tax value in dollars                 |
-| transactiondate              | N/A       | Day the property was purchased                  |
-| age                          | N/A       | 2017-yearbuilt (to see the age of the property) |
-| taxamount                    | tax_amount| amount of tax on property                       |
-| tax_rate                     | N/A       | tax_rate on property                            |
+| Column Name               | Description                              |
+|---------------------------|------------------------------------------|
+| acres                     | number of acres (lotsize/43560)          |
+| age                       | 2017-yearbuilt                           |
+| bath_bed_ratio            | bathrooms to bedrooms ratio              |
+| baths                     | number of bathrooms                      |
+| bathsandbeds              | number of bathrooms and bedrooms         |
+| beds                      | number of bedrooms                       |
+| county                    | which county property is in              |
+| fips                      | FIPS code of property                    |
+| land_dollar_per_sqft      | landtaxvaluedollarcnt/sqft               |
+| latitude                  | latitude coordinate                      |
+| longitude                 | longitude coordinate                     |
+| los_angeles               | if property is in Los Angeles =1, else 0 |
+| lot_dollar                | dollar value for property land           |
+| orange                    | if property is in Orange =1, else 0      |
+| rawcensustractandblock    | census bureau data                       |
+| regionidzip               | zip code (not accurate)                  |
+| sqft                      | square footage of property               |
+| structure_dollar_per_sqft | dollar per square foot                   |
+| tax_amount                | tax amount of property                   |
+| tax_rate                  | tax rate of property                     |
+| tax_value                 | tax value of property                    |
+| ventura                   | if county is in Ventura =1, else 0       |
+| yearbuilt                 | year property was built                  |
+| propertylandusetype       | property type                            |
+| parcelid                  | property ID                              |
+
+
 
 
 <br>
