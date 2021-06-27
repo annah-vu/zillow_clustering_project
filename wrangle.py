@@ -10,6 +10,7 @@ import numpy as np
 from scipy import stats
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 def get_connection(db, username=username, host=host, password=password):
     '''
@@ -57,7 +58,7 @@ def get_zillow_data():
 
 def remove_outliers(df, k, col_list):
     ''' remove outliers from a list of columns in a dataframe 
-        and return that dataframe
+        and returns that dataframe
     '''
     
     for col in col_list:
@@ -90,29 +91,6 @@ def handle_missing_values(df, prop_required_column = .5, prop_required_row = .5)
     return df    
     
     
-def impute(df, my_strategy, column_list):
-    ''' take in a df, strategy, and cloumn list
-        return df with listed columns imputed using input stratagy
-    '''
-        
-    imputer = SimpleImputer(strategy=my_strategy)  # build imputer
-
-    df[column_list] = imputer.fit_transform(df[column_list]) # fit/transform selected columns
-
-    return df
-
-def impute_birds(train, validate, test, my_strategy, column_list):
-    ''' take in a df, strategy, and cloumn list
-        return df with listed columns imputed using input stratagy
-    '''
-        
-    imputer = SimpleImputer(strategy=my_strategy)  # build imputer
-
-    train[column_list] = imputer.fit_transform(train[column_list]) # fit/transform selected columns
-    validate[column_list] = imputer.transform(validate[column_list])
-    test[column_list] = imputer.transform(test[column_list])
-
-    return train, validate, test
 #######
 def get_counties(df):
     '''
@@ -134,6 +112,12 @@ def get_counties(df):
 
 
 def create_features(df):
+    '''
+    creates features for 2017 zillow data: age, age_bin, taxrate, acres, acres_bin, sqft_bin, structure_dollar_per_sqft,
+    structure_dollar_sqft_bin
+    land_dollar_per_sqft, lot_dollar_sqft_bin, and cola. Turns these into float data types. Returns df with these new features
+    '''
+    #age is 2017 minus the year built
     df['age'] = 2017 - df.yearbuilt
     df['age_bin'] = pd.cut(df.age, 
                            bins = [0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140],
@@ -185,7 +169,7 @@ def create_features(df):
     # 12447 is the ID for city of LA. 
     # I confirmed through sampling and plotting, as well as looking up a few addresses.
     df['cola'] = df['regionidcity'].apply(lambda x: 1 if x == 12447.0 else 0)
-
+    
     return df
 
 def remove_outliers_new_features(df):
@@ -204,7 +188,7 @@ def remove_outliers_new_features(df):
 
 #####
 def prepare_zillow(df):
-    ''' Prepare Zillow Data'''
+    ''' Prepare Zillow Data with the help of previous functions'''
     
     # Restrict propertylandusedesc to those of single unit
     df = df[(df.propertylandusedesc == 'Single Family Residential') |
@@ -237,12 +221,8 @@ def prepare_zillow(df):
     
     #drop outliers from new features
     df = remove_outliers_new_features(df)
-    # imputing discrete columns with most frequent value
-    #df = impute(df, 'most_frequent', ['calculatedbathnbr', 'fullbathcnt', 'regionidcity', 'regionidzip', 'censustractandblock'])
     
-    # imputing continuous columns with median value
-    #df = impute(df, 'median', ['finishedsquarefeet12', 'lotsizesquarefeet', 'structuretaxvaluedollarcnt', 'taxvaluedollarcnt', 'landtaxvaluedollarcnt', 'taxamount'])
-    
+    #rename columns for easier reference
     df = df.rename(columns={
                             'parcelid': 'parcel_id',
                             'calculatedfinishedsquarefeet': 'sqft',
@@ -254,11 +234,18 @@ def prepare_zillow(df):
         
     })
     
-    #df = df.dropna()
+    #county column with which county the property is located in
     df['county'] = df.fips.apply(lambda x: 'orange' if x == 6059.0 else 'los_angeles' if x == 6037.0 else 'ventura')
+    
+    #drop fips 
     df = df.drop(columns=['fips'])
+    
+    #dummies for county column
     dummies = pd.get_dummies(df['county'])
     df = pd.concat([df, dummies],axis=1)
+    
+    #combine number of bathrooms and bedrooms
+    df['bathsandbeds'] = df.baths + df.beds
     return df
 
 
@@ -311,6 +298,10 @@ def train_validate_test(df, target):
     return train, validate, test, X_train, y_train, X_validate, y_validate, X_test, y_test
 
 def impute_nulls(train, validate, test, strategy='mean', col_list=None): 
+    '''
+    this function will take in a train, validate, and test, with a strategy and a list of columns and impute values
+    for them. Will return back a train, validate, and test with imputed values
+    '''
     if col_list != None:
         for col in col_list:
             imputer=SimpleImputer(strategy=strategy)
@@ -327,3 +318,63 @@ def impute_nulls(train, validate, test, strategy='mean', col_list=None):
 
             
     return train, validate, test
+
+
+
+def split_X_y(train, validate, test, target):
+    '''
+    Splits train, validate, and test into a dataframe with independent variables
+    and a series with the dependent, or target variable. 
+    The function returns 3 dataframes and 3 series:
+    X_train (df) & y_train (series), X_validate & y_validate, X_test & y_test. 
+    '''
+
+        
+    # split train into X (dataframe, drop target) & y (series, keep target only)
+    X_train = train.drop(columns=[target])
+    y_train = train[target]
+    
+    # split validate into X (dataframe, drop target) & y (series, keep target only)
+    X_validate = validate.drop(columns=[target])
+    y_validate = validate[target]
+    
+    # split test into X (dataframe, drop target) & y (series, keep target only)
+    X_test = test.drop(columns=[target])
+    y_test = test[target]
+    
+    return X_train, y_train, X_validate, y_validate, X_test, y_test
+
+
+def standard_scale_data(X_train, X_validate, X_test):
+    """
+    Takes in X_train, X_validate and X_test dfs with numeric values only
+    Returns scaler, X_train_scaled, X_validate_scaled, X_test_scaled dfs
+    """
+    scaler = StandardScaler().fit(X_train)
+    X_train_scaled = pd.DataFrame(scaler.transform(X_train), index = X_train.index, columns = X_train.columns)
+    X_validate_scaled = pd.DataFrame(scaler.transform(X_validate), index = X_validate.index, columns = X_validate.columns)
+    X_test_scaled = pd.DataFrame(scaler.transform(X_test), index = X_test.index, columns = X_test.columns)
+    return X_train_scaled, X_validate_scaled, X_test_scaled
+
+def get_object_cols(df):
+    '''
+    This function takes in a dataframe and identifies the columns that are object types
+    and returns a list of those column names. 
+    '''
+    # create a mask of columns whether they are object type or not
+    mask = np.array(df.dtypes == "object")
+
+        
+    # get a list of the column names that are objects (from the mask)
+    object_cols = df.iloc[:, mask].columns.tolist()
+    
+    return object_cols
+
+def get_numeric_X_cols(X_train, object_cols):
+    '''
+    takes in a dataframe and list of object column names
+    and returns a list of all other columns names, the non-objects. 
+    '''
+    numeric_cols = [col for col in X_train.columns.values if col not in object_cols]
+    
+    return numeric_cols
