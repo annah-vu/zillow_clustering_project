@@ -54,7 +54,11 @@
  <br>
 
 ## 5.) Project Summary
-   I used clustering to see if there were any variables that could be grouped together, however, I didn't find anything profound enough to be used in my models. It said my cluster column ranked 36/42 for usage! Although it may have not entirely helped me this time around, it was still nice to see how it could group latitude/longitude/age and other features of a house like bedrooms, bathrooms, and age. 
+   I used clustering to see if there were any variables that could be grouped together, however, I didn't find anything profound enough to be used in my models. I made a cluster based off of age and square footage. Then I made one of  longitude and latitude. I also made two models with three features, the first of basic house features: bathrooms, bedrooms, dollar per square foot, and age.  The second one was location based to see if I could make some notable neighborhoods by using longitude, latitude, and age. 
+According to recursive feature elimination, none of my cluster groups were helpful. I used them just to see if it would work, along with the counties. The test deemed them to not be helpful, and my model performed with more error than the mean as every prediction. 
+
+
+
 
 ## 6.) Hypothesis
 
@@ -177,10 +181,10 @@ The models worked best with sqft, baths, beds, and age. Polynomial Regression pe
 | Model                            | RMSE Training | RMSE Validate | R^2   |
 |----------------------------------|---------------|---------------|-------|
 | Baseline                         | 0.1688        | 0.1632        | 0.00  |
-| OLS LinearRegression             | 0.1685        | 0.1630        | 0.002 |
+| OLS LinearRegression             | 0.1687        | 0.1630        | 0.002 |
 | LassoLars                        | 0.1688        | 0.1632        | 0.00  |
-| TweedieRegressor                 | 0.1686        | 0.1630        | 0.002 |
-| PolynomialRegression (2 degrees) | 0.1683        | 0.1631        | 0.001 |
+| TweedieRegressor                 | 0.1687        | 0.1630        | 0.002 |
+| PolynomialRegression (2 degrees) | 0.1687        | 0.1629        | 0.001 |
 <br>
 
 Test for OLS Linear Regression:
@@ -197,13 +201,18 @@ I will be giving a presentation over my findings!
 
 ## 9.) Conclusion
 
-To conclude...
-My clustering didn't help with my supervised model, however, I could not find the right combinations to make my model beat the baseline for predicting log error either. 
+To conclude... 
+My clustering didn't help with my supervised model, however, I could not find the right combinations to make my model beat the baseline for predicting log error either.
 
- -  Log error was different for properties depending on county, number of bathrooms, bedrooms, dollar per square foot, and age.
- - I made clusters with age and square footage, longitude and latitude, and based on property features like age, dollar per sqft, and number of bathrooms and bedrooms. I also made one based on location (neighborhoods) which consisted of longitude, latitude, and age. 
- - Appears that Zestimates are pretty good at guessing what the final sale price will be. 
- - Further exploration needed?
+ - Log error was different for properties depending on county, number of bathrooms, bedrooms, dollar per square foot, and age.
+ - I made clusters with age and square footage, longitude and latitude, and based on property features like age, dollar per sqft, and number of bathrooms and bedrooms. I also made one based on location (neighborhoods) which consisted of longitude, latitude, and age.
+ - Appears that Zestimates are pretty good at guessing what the final sale price will be.
+ - My best model was my Quadratic (2 degrees), but even though it surpassed the baseline on train and validate, it did not perform better on the test. The RMSE to beat was 0.165, but mine was 0.178. It did better on r^2 at only 0.001 though. 
+
+Next steps: 
+<br>
+
+I should see if the other cluster models I made would help, the reason I didn’t use them was because their p-value wasn’t as significant, and they had a lower f score. I should also try clustering other features together, I notice tax amount and tax value seem important too.
 
 
 
